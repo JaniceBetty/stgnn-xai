@@ -130,3 +130,11 @@ dmypy.json
 
 # VSCode
 .vscode/*
+
+data/metr-la/clustered/*
+data/metr-la/explainable/*
+data/metr-la/explained/*
+data/metr-la/predicted/*
+data/metr-la/processed/*
+data/metr-la/raw/*
+data/metr-la/translated/*
