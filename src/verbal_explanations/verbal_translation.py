@@ -14,6 +14,8 @@ from .content_extraction import (
     get_cluster_location_info,
     get_repetition_of_location_information)
 
+from src.rag.rag_model import RAGModel
+
 def translate_dataset(
     x: np.ndarray,
     x_times: np.ndarray,
@@ -22,6 +24,7 @@ def translate_dataset(
     y_times: np.ndarray,
     node_pos_dict: Dict[int, str],
     node_info: Dict[str, Tuple[str, float]],
+    rag_model: RAGModel
     ) -> np.ndarray:
     """
     Translate the dataset.
@@ -43,6 +46,8 @@ def translate_dataset(
     node_info : { str: (str, float) }
         The dictionary containing the information of street and kilometrage
         about each node ID.
+    rag_model : RAGModel
+        The RAG model used to query for additional context.
         
     Returns
     -------
@@ -58,7 +63,8 @@ def translate_dataset(
             y_,
             y_times_,
             node_pos_dict,
-            node_info))
+            node_info,
+            rag_model))
 
     return np.array(translations)
     
@@ -70,6 +76,7 @@ def get_verbal_explanation(
     y_times: np.ndarray,
     node_pos_dict: Dict[int, str],
     node_info: Dict[str, Tuple[str, float]],
+    rag_model: RAGModel
     ) -> str:
     """
     Get the verbal explanation of the prediction.
@@ -89,6 +96,8 @@ def get_verbal_explanation(
     node_info : { str: (str, float) }
         The dictionary containing the information of street and kilometrage
         about each node ID.
+    rag_model : RAGModel
+        The RAG model used to query for additional context.
 
     Returns
     -------
@@ -234,6 +243,17 @@ def get_verbal_explanation(
 
         other_paragraphs.append(other_paragraph)
 
+    # Query the RAG model for additional context
+    query = (
+        f"Provide a comprehensive explanation for the {target_cluster_type} "
+        f"occurring at {street_sentence[0][0]} {time_sentence} {day_sentence}. "
+        f"Discuss historical significance, typical traffic patterns at this time and day, "
+        f"and any known events or anomalies that could impact traffic."
+    )
+
+    rag_context = rag_model.rag_query(query, top_k=3, max_gen_length=150)
+    other_paragraphs.append(rag_context)
+
     # Get the explanation.
     explanation = first_paragraph + '\n\n' + '\n\n'.join(other_paragraphs)
     return explanation
@@ -244,7 +264,7 @@ def _replace_template_placeholder(
     replacement: str,
     ) -> str:
     """
-    Replace the `placeholder` in the `sentence` with the `replacement`.
+    Replace the placeholder in the sentence with the replacement.
 
     Parameters
     ----------
@@ -264,7 +284,7 @@ def _replace_template_placeholder(
         sentence = sentence.replace('{d}, ', '')
         sentence = sentence.replace(' {d}.', '.')
 
-    # Substitute `placeholder` in the sentence with the `replacement`.
+    # Substitute placeholder in the sentence with the replacement.
     sentence = sentence.replace(placeholder.upper(), replacement.capitalize())
     sentence = sentence.replace(placeholder, replacement)
 
